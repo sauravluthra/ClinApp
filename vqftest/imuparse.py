@@ -8,7 +8,7 @@ from pytransform3d.plot_utils import remove_frame
 #***********************************************
 def main():
 
-    data = fetchData("imudata/stationaryData1.txt")
+    data = fetchData("imudata/imu123.txt")
 
     #gyr = np.deg2rad(1)*np.ones((10, 3))  # in rad/s
     #ryg = np.ascontiguousarray(data[['gx', 'gy', 'gz']].to_numpy())
@@ -16,7 +16,7 @@ def main():
     #print(str(gyr) + "\n\n==========\n\n" + str(ryg))
 
     for id, imuData in enumerate(data):
-        runvqf(imuData, id)
+        runvqf(imuData, (id))
 
     print("\n\nEXIT PROGRAM")
 
@@ -38,31 +38,46 @@ def runvqf(data, imuID):
     # alternative: vqf = PyVQF(Ts)
     out = vqf.updateBatch(gyr, acc)
 
+    print(f"\n\nIMU {imuID} OUTPUT\n\n" + str(out))
+
+    #with open(f"Quaternion_Out_IMU{imuID}", "w") as f:
+       # f.write(str(out))
+
     # plot the quaternion
     plt.figure()
     plt.subplot(211)
     plt.plot(out['quat6D'])
-    plt.title('quaternion (full version) | IMU#' + str(imuID))
+    plt.title('quaternion 6D with Bias Est. | IMU#' + str(imuID))
     plt.grid()
 
     # run the basic version with the same data
-    params = dict(
-        motionBiasEstEnabled=False,
-        restBiasEstEnabled=False,
-        magDistRejectionEnabled=False,
-    )
-    vqf2 = VQF(Ts, **params)
+    #params = dict(
+    #    motionBiasEstEnabled=False,
+    #    restBiasEstEnabled=False,
+    #    magDistRejectionEnabled=False,
+    #)
+    #vqf2 = VQF(Ts, **params)
+    vqf2 = VQF(Ts)
     # alternative: vqf2 = BasicVQF(Ts)
     # alternative: vqf2 = PyVQF(Ts, **params)
-    out2 = vqf2.updateBatch(gyr, acc)
+    out2 = vqf2.updateBatch(gyr, acc, mag)
 
     # plot quaternion (notice the difference due to disabled bias estimation)
     plt.subplot(212)
-    plt.plot(out2['quat6D'])
+    plt.plot(out2['quat9D'])
     plt.grid()
-    plt.title('quaternion (basic version)  | IMU#' + str(imuID))
+    plt.title('quaternion 9D with Bias Est.  | IMU#' + str(imuID))
     plt.tight_layout()
     plt.show()
+
+    np.set_printoptions(threshold=np.inf)
+
+    with open(f"output/QuatOutput6D_{imuID}.txt", "w+") as f:
+        f.write(str(out['quat6D']))
+
+    with open(f"output/QuatOutput9D_{imuID}.txt", "w+") as f:
+        f.write(str(out2['quat9D']))
+
 
 def visualizeEuler():
     return 0
@@ -70,12 +85,16 @@ def visualizeEuler():
 def fetchData(fileName):
 
     #Number of IMU sensors
-    IMU_COUNT = 2
+    IMU_COUNT = 3
 
     #Create a list of dataframes representing each IMU sensor's data
     df1 = pd.DataFrame()
     df2 = pd.DataFrame()
-    dfArr = [df1, df2]
+    df3 = pd.DataFrame()
+    #df4 = pd.DataFrame()
+    #df5 = pd.DataFrame()
+
+    dfArr = [df1, df2, df3]
     
     with open(fileName, "r") as f:
 
@@ -86,32 +105,42 @@ def fetchData(fileName):
 
         for i in range (0, numSamples):
 
-            sample = fullTxt[i * 5 : i * 5 + 5]
+            try:
+                sample = fullTxt[i * 5 : i * 5 + 5]
 
-            imuID     = int(sample[0].strip("IMU #:"))
-            timestamp = int(sample[1])
+                imuID     = int(sample[0].strip("IMU #:"))
+                timestamp = int(sample[1])
 
-            a = sample[2].strip("\n \t").split(",")
-            m = sample[3].strip("\n \t").split(",")
-            g = sample[4].strip("\n \t").split(",")
+                a = sample[2].strip("\n \t").split(",")
+                g = sample[3].strip("\n \t").split(",")
+                m = sample[4].strip("\n \t").split(",")
 
-            new_row = pd.DataFrame()
-            new_row = { "milliseconds": timestamp, 
-                        "gx": np.deg2rad(float(g[0])),
-                        "gy": np.deg2rad(float(g[1])),
-                        "gz": np.deg2rad(float(g[2])),
-                        "ax": float(a[0]),
-                        "ay": float(a[1]),
-                        "az": float(a[2]),
-                        "mx": float(m[0]),
-                        "my": float(m[1]),
-                        "mz": float(m[2]),
-                      }
-            dfArr[imuID] = dfArr[imuID].append(new_row, ignore_index=True)
+                new_row = pd.DataFrame()
+                new_row = { "milliseconds": timestamp, 
+                            "gx": np.deg2rad(float(g[0])),
+                            "gy": np.deg2rad(float(g[1])),
+                            "gz": np.deg2rad(float(g[2])),
+                            #"gx": float(g[0]),
+                            #"gy": float(g[1]),
+                            #"gz": float(g[2]),
+                            "ax": float(a[0]),
+                            "ay": float(a[1]),
+                            "az": float(a[2]),
+                            "mx": float(m[0]),
+                            "my": float(m[1]),
+                            "mz": float(m[2]),
+                        }
+                dfArr[imuID] = dfArr[imuID].append(new_row, ignore_index=True)
+            except:
+                print(f"ERROR OCCURED: \n{str(sample)}")
+                break
 
     print("Succesfully Fetched Data from " + fileName + " (" + str(numSamples) + " samples)\n")
-    print("\n\nIMU 0\n\n" + str(dfArr[0].head(3)))
-    print("\n\nIMU 1\n\n" + str(dfArr[1].head(3)))
+    #print("\n\nIMU 0\n\n" + str(dfArr[0].head(3)))
+    #print("\n\nIMU 1\n\n" + str(dfArr[1].head(3)))
+    #print("\n\nIMU 2\n\n" + str(dfArr[1].head(3)))
+    #print("\n\nIMU 3\n\n" + str(dfArr[1].head(3)))
+    #print("\n\nIMU 4\n\n" + str(dfArr[1].head(3)))
 
     return dfArr
 
