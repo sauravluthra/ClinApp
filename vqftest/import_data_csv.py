@@ -38,13 +38,16 @@ def main():
         'SAMPLING_TIME_VQF'    : 0.01 #sampling time in seconds for the VQF filter
     }
 
+    #Get a name for output directory from the CSV file name
     outputDir = params['CSV_FILENAME']
     outputDir = f"output/{outputDir[outputDir.rfind('/') - 1 : -4]}/"
     params['OUTPUT_DIR'] = outputDir
 
+    #Create directory if it does not exist
     if not os.path.isdir(params['OUTPUT_DIR']):
         os.makedirs(params['OUTPUT_DIR'])
     
+    #Tell User where to find output
     print(f"OUTPUT_DIR : {params['OUTPUT_DIR']}")
 
     #Get each IMU's dataframe
@@ -59,6 +62,7 @@ def main():
 
 def runvqf(data, imuID, params):
 
+    #Downsample the dataframe
     data = downSampledf(data, (params['SAMPLING_TIME_VQF'] / params['SAMPLING_TIME_SENSOR']))
 
     #Must convert the dataframe to a np array for VQF to work
@@ -76,30 +80,35 @@ def runvqf(data, imuID, params):
     # Run orientation estimation
     vqf9D = offlineVQF(gyr, acc, mag,Ts)
 
+    #Do a 6D vqf estimation
     vqf6D = VQF(Ts)
     out6D = vqf6D.updateBatch(gyr, acc)
     #out_quat = vqf.updateBatch()
     #out_rest = vqf.getRestDetected()
+
+    #Plot all results
     plt.figure()
     plt.subplot(211)
     plt.plot(out6D['quat6D'])
     plt.title(f"QUATERNION 6D w/BIAS ESTIMATE | IMU#{str(imuID)} | {params['CSV_FILENAME']}")
     plt.grid()
-
-
     plt.subplot(212)
     plt.plot(vqf9D['quat9D'])
     plt.grid()
     plt.title(f"QUATERNION 9D w/BIAS ESTIMATE | IMU#{str(imuID)} | {params['CSV_FILENAME']}")
     plt.tight_layout()
 
-    np.set_printoptions(threshold=np.inf)
+    #Get current timestamp for file naming purposes
     now = datetime.now()
     nowStr = now.strftime("%Y%m%d_%H%M%S")
 
+    #Save plot as an image and display it
     plt.savefig(os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}_{nowStr}.png'))
     plt.show()
 
+    np.set_printoptions(threshold=np.inf)
+
+    #Save all quaternion estimations to CSV format
     outputFile6D = os.path.join(params['OUTPUT_DIR'], f'Quat6D_IMU{imuID}_{nowStr}.csv')
     with open(outputFile6D, "w+"):
         np.savetxt(outputFile6D, out6D['quat6D'], delimiter = ",")
@@ -174,8 +183,8 @@ def fetchData(params):
     print(f"Succesfully Fetched Data from {params['CSV_FILENAME']}\n")
     
     #Print for sanity check
-    for d in dfArr:
-       print(f"datadatadata\n\n{str(d)}")
+    #for d in dfArr:
+    #   print(f"datadatadata\n\n{str(d)}")
 
     return dfArr
 
