@@ -20,21 +20,42 @@ def main():
 #Walking_1.csv 
 #Walking_2.csv
     
+#Maddie
+#ForwardBending.csv 
+#ForwardBending2.csv 
+#SideBending.csv 
+#Static.csv 
+#Walking1.csv 
+#Walking2.csv  
+
+#Noah 
+#Walking2.csv 
+#Walking2_Take2.csv 
+#Walking1.csv 
+#Walking1_Take2.csv 
+#Static.csv 
+#Static_Take2.csv 
+#Side_Bending_Take2.csv 
+#Side_Bending.csv 
+#Forward_Bending.csv 
+#Forward_Bending_Take2.csv
+    
 #Lian
 #ForwardBending01.csv 
 #SideBending01.csv 
 #Static.csv 
 #Walking_1.csv 
 #Walking_2.csv
-    
+
+
     #ADJUST ALL RUN-TIME PARAMETERS HERE
     params = {
         'CSV_FILENAME'         : "imudata/41XG62/SubjectL/Walking_2.csv", #File Name of csv
         'OUTPUT_DIR'           : "",
-        'IMU_COUNT'            : 5, #Number of IMU sensors
-        'FIRST_ROW'            : 6, #First row of data (Do NOT change)
-        'LAST_ROW'             : 2000, #Last row of data to read
-        'SAMPLING_TIME_SENSOR' : 0.005, #real-world sampling period of the sensor in seconds
+        'IMU_COUNT'            : 7, #Number of IMU sensors
+        'FIRST_ROW'            : 3, #First row of data (Do NOT change)
+        'LAST_ROW'             : 990, #Last row of data to read
+        'SAMPLING_TIME_SENSOR' : 0.01, #real-world sampling period of the sensor in seconds
         'SAMPLING_TIME_VQF'    : 0.01 #sampling time in seconds for the VQF filter
     }
 
@@ -63,7 +84,7 @@ def main():
 def runvqf(data, imuID, params):
 
     #Downsample the dataframe
-    data = downSampledf(data, (params['SAMPLING_TIME_VQF'] / params['SAMPLING_TIME_SENSOR']))
+    #data = downSampledf(data, (params['SAMPLING_TIME_VQF'] / params['SAMPLING_TIME_SENSOR']))
 
     #Must convert the dataframe to a np array for VQF to work
     try:
@@ -99,21 +120,24 @@ def runvqf(data, imuID, params):
     plt.tight_layout()
 
     #Get current timestamp for file naming purposes
-    now = datetime.now()
-    nowStr = now.strftime("%Y%m%d_%H%M%S")
+    #now = datetime.now()
+    #nowStr = now.strftime("%Y%m%d_%H%M%S")
 
     #Save plot as an image and display it
-    plt.savefig(os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}_{nowStr}.png'))
+    #plt.savefig(os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}_{nowStr}.png'))
+    plt.savefig(os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}.png'))
     plt.show()
 
     np.set_printoptions(threshold=np.inf)
 
     #Save all quaternion estimations to CSV format
-    outputFile6D = os.path.join(params['OUTPUT_DIR'], f'Quat6D_IMU{imuID}_{nowStr}.csv')
+    #outputFile6D = os.path.join(params['OUTPUT_DIR'], f'Quat6D_IMU{imuID}_{nowStr}.csv')
+    outputFile6D = os.path.join(params['OUTPUT_DIR'], f'Quat6D_IMU{imuID}.csv')
     with open(outputFile6D, "w+"):
         np.savetxt(outputFile6D, out6D['quat6D'], delimiter = ",")
 
-    outputFile9D = os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}_{nowStr}.csv')
+    #outputFile9D = os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}_{nowStr}.csv')
+    outputFile9D = os.path.join(params['OUTPUT_DIR'], f'Quat9D_IMU{imuID}.csv')
     with open(outputFile9D, "w+"):
         np.savetxt(outputFile9D, vqf9D['quat9D'], delimiter = ",")
 
@@ -138,7 +162,8 @@ def fetchData(params):
 
     print(f"FETCH DATA : {params['CSV_FILENAME']}")
     #Reads in the csv file and only stores the relevant rows of data (excl.headers and additional data on bottom)
-    csv_df = pd.read_csv(params['CSV_FILENAME'], header=3, on_bad_lines='warn')
+    csv_df = pd.read_csv(params['CSV_FILENAME'], header=0, on_bad_lines='warn')
+    print(f"Unedited:\n {csv_df.head()}")
     csv_df = csv_df.loc[params['FIRST_ROW'] : params['LAST_ROW']]
     
     #Rename all columns to "col[number]"
@@ -183,8 +208,8 @@ def fetchData(params):
     print(f"Succesfully Fetched Data from {params['CSV_FILENAME']}\n")
     
     #Print for sanity check
-    #for d in dfArr:
-    #   print(f"datadatadata\n\n{str(d)}")
+    for d in dfArr:
+       print(f"datadatadata\n\n{str(d)}")
 
     return dfArr
 
